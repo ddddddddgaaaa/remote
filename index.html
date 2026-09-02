@@ -95,6 +95,17 @@
   }
   .btn:active { transform: scale(0.96); }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+  .btn-full { width: 100%; }
+  .btn-red {
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.35);
+    color: #fca5a5;
+  }
+  .btn-red:hover:not(:disabled) {
+    background: rgba(239,68,68,0.22);
+    box-shadow: 0 4px 18px rgba(239,68,68,0.22);
+    transform: translateY(-1px);
+  }
   .btn-indigo {
     background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff;
     box-shadow: 0 4px 18px rgba(99,102,241,0.35);
@@ -176,20 +187,24 @@
 <div class="card">
   <div class="card-title">🎲 Быстрый ролл</div>
   <div>
-    <div class="field-label">Ник который ДОЛЖЕН выпасть</div>
+    <div class="field-label">Никнейм который ДОЛЖЕН выпасть</div>
     <input type="text" id="nick-input" placeholder="Введи никнейм участника…" autocomplete="off"
            onkeydown="if(event.key==='Enter') doForceRoll()">
   </div>
   <button class="btn-roll" id="roll-btn" onclick="doForceRoll()" disabled>
-    ⚡ БЫСТРЫЙ РОЛЛ
+    ⚡ ЗАДАТЬ ДЛЯ БЫСТРОГО РОЛЛА
   </button>
-  <p style="font-size:11px; color:var(--muted); text-align:center; line-height:1.5;">
-    Ник сразу появится победителем в EnergyShow на всех устройствах
+  <button class="btn btn-red btn-full" style="font-size:12px;" onclick="doClearRig()">
+    ✖ Сбросить подкрутку
+  </button>
+  <p style="font-size:12px; color:var(--muted); text-align:center; line-height:1.5;">
+    Введи ник и нажми кнопку. Ник сохранится в облаке.<br>
+    Когда в основном окне <b>EnergyShow</b> нажмут кнопку <b>«Быстрый ролл»</b> — выпадет именно этот человек!
   </p>
 </div>
 
 <div class="card" id="last-card" style="display:none;">
-  <div class="card-title">✅ Последняя команда</div>
+  <div class="card-title">🎯 Текущая подкрутка</div>
   <div id="last-info" style="font-size:15px; font-weight:700; color:#86efac;"></div>
   <div id="last-time" style="font-size:11px; color:var(--muted);"></div>
 </div>
@@ -259,7 +274,7 @@ function initFirebase() {
 }
 
 function loadChannel() {
-    const saved = localStorage.getItem('remote_ctrl_channel') || '';
+    const saved = sanitize(localStorage.getItem('remote_ctrl_channel') || '');
     document.getElementById('channel-input').value = saved;
     applyChannel(saved);
     if (saved) subscribeLastCommand();
@@ -277,29 +292,77 @@ function saveChannel() {
 }
 
 function applyChannel(ch) {
-    currentChannel = ch;
+    currentChannel = sanitize(ch);
     const disp = document.getElementById('channel-display');
-    disp.innerHTML = ch
-        ? 'Канал: <b style="color:var(--accent2)">' + ch + '</b>'
+    disp.textContent = currentChannel
+        ? 'Канал: ' + currentChannel
         : 'Канал не задан';
-    document.getElementById('roll-btn').disabled = !ch || !db;
+    document.getElementById('roll-btn').disabled = !currentChannel || !db;
+
+    const lastCard = document.getElementById('last-card');
+    const lastInfo = document.getElementById('last-info');
+    const lastTime = document.getElementById('last-time');
+    if (lastCard) lastCard.style.display = 'none';
+    if (lastInfo) lastInfo.textContent = '';
+    if (lastTime) lastTime.textContent = '';
+}
+
+function getCommandTime(value) {
+    if (!value) return '';
+    try {
+        const millis = typeof value.toMillis === 'function' ? value.toMillis() : Number(value);
+        return Number.isFinite(millis) ? new Date(millis).toLocaleTimeString('ru-RU') : '';
+    } catch (error) {
+        return '';
+    }
 }
 
 let _unsub = null;
 function subscribeLastCommand() {
-    if (_unsub) { try { _unsub(); } catch(e){} _unsub = null; }
+    if (_unsub) {
+        try { _unsub(); } catch (error) { addLog('Отписка: ' + error.message, 'err'); }
+        _unsub = null;
+    }
     if (!db || !currentChannel) return;
-    _unsub = db.collection('remoteCommands').doc('cmd_' + currentChannel)
-        .onSnapshot(doc => {
-            if (!doc.exists) return;
-            const d = doc.data() || {};
-            if (d.action === 'forceRoll' && d.nick) {
-                document.getElementById('last-card').style.display = '';
-                const ts = d.ts ? new Date(d.ts.toMillis()).toLocaleTimeString('ru-RU') : '';
-                document.getElementById('last-info').textContent = '⚡ ' + d.nick;
-                document.getElementById('last-time').textContent = ts ? 'В ' + ts : '';
-            }
-        }, err => addLog('Подписка: ' + err.message, 'err'));
+
+    try {
+        _unsub = db.collection('remoteCommands').doc('cmd_' + currentChannel)
+            .onSnapshot(doc => {
+                const lastCard = document.getElementById('last-card');
+                const lastInfo = document.getElementById('last-info');
+                const lastTime = document.getElementById('last-time');
+                if (!lastCard || !lastInfo || !lastTime) return;
+
+                if (!doc.exists) {
+                    lastCard.style.display = 'none';
+                    lastInfo.textContent = '';
+                    lastTime.textContent = '';
+                    return;
+                }
+
+                const data = doc.data() || {};
+                if ((data.action === 'forceRoll' || data.action === 'setRig100') && typeof data.nick === 'string' && data.nick.trim()) {
+                    const nick = data.nick.trim();
+                    const timestamp = getCommandTime(data.ts);
+                    lastCard.style.display = '';
+                    lastInfo.textContent = '🎯 ' + nick;
+                    lastTime.textContent = timestamp
+                        ? 'Сохранено в ' + timestamp + ' (ждёт нажатия «Быстрый ролл»)' 
+                        : 'Команда сохранена (ждёт нажатия «Быстрый ролл»)';
+                } else if (data.action === 'clearRig') {
+                    lastCard.style.display = 'none';
+                    lastInfo.textContent = '';
+                    lastTime.textContent = '';
+                }
+            }, error => {
+                addLog('Подписка: ' + error.message, 'err');
+                setStatus('Ошибка подписки', 'err');
+            });
+    } catch (error) {
+        addLog('Ошибка подписки: ' + error.message, 'err');
+        setStatus('Ошибка подписки', 'err');
+        _unsub = null;
+    }
 }
 
 async function doForceRoll() {
@@ -311,7 +374,7 @@ async function doForceRoll() {
     const btn = document.getElementById('roll-btn');
     btn.disabled = true;
     btn.classList.add('firing');
-    setStatus('Отправка…', 'busy');
+    setStatus('Сохранение…', 'busy');
 
     try {
         await db.collection('remoteCommands').doc('cmd_' + currentChannel).set({
@@ -320,9 +383,9 @@ async function doForceRoll() {
             channel: currentChannel,
             ts:      firebase.firestore.FieldValue.serverTimestamp(),
         });
-        addLog('✅ Отправлено → "' + nick + '"', 'ok');
-        showToast('⚡ Ролл: ' + nick, '#86efac');
-        setStatus('Команда отправлена → ' + nick, 'ok');
+        addLog('🎯 Сохранён ник: "' + nick + '" для следующего быстрого ролла', 'ok');
+        showToast('🎯 Задано: ' + nick, '#86efac');
+        setStatus('Ник сохранён → ' + nick, 'ok');
         setTimeout(() => { document.getElementById('nick-input').value = ''; }, 700);
     } catch (e) {
         addLog('Ошибка: ' + e.message, 'err');
@@ -330,6 +393,28 @@ async function doForceRoll() {
         setStatus('Ошибка', 'err');
     } finally {
         setTimeout(() => { btn.disabled = false; btn.classList.remove('firing'); }, 700);
+    }
+}
+
+async function doClearRig() {
+    if (!currentChannel) { showToast('⚠️ Укажи канал!', '#fbbf24'); return; }
+    if (!db) { showToast('❌ Firebase не подключён', '#fca5a5'); return; }
+
+    setStatus('Сброс…', 'busy');
+    try {
+        await db.collection('remoteCommands').doc('cmd_' + currentChannel).set({
+            action:  'clearRig',
+            nick:    '',
+            channel: currentChannel,
+            ts:      firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        addLog('✖ Подкрутка сброшена', 'info');
+        showToast('✖ Подкрутка сброшена', '#93c5fd');
+        setStatus('Подкрутка выключена', 'ok');
+        document.getElementById('last-card').style.display = 'none';
+    } catch(e) {
+        addLog('Ошибка: ' + e.message, 'err');
+        showToast('❌ ' + e.message, '#fca5a5');
     }
 }
 
