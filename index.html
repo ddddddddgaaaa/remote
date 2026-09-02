@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎮 Пульт управления — EnergyShow</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:      #0a0a14;
+    --panel:   #111122;
+    --border:  rgba(99,102,241,0.25);
+    --accent:  #6366f1;
+    --accent2: #a78bfa;
+    --green:   #22c55e;
+    --red:     #ef4444;
+    --gold:    #f59e0b;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+    --radius:  16px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 60px;
+    gap: 20px;
+  }
+
+  .header { width: 100%; max-width: 560px; text-align: center; }
+  .header h1 {
+    font-size: 22px; font-weight: 900; letter-spacing: 2px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header p { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  .status-bar {
+    width: 100%; max-width: 560px;
+    display: flex; align-items: center; gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 10px 16px; font-size: 13px;
+  }
+  .status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--muted); flex-shrink: 0; transition: background 0.3s;
+  }
+  .status-dot.ok   { background: var(--green); box-shadow: 0 0 8px rgba(34,197,94,0.6); }
+  .status-dot.err  { background: var(--red);   box-shadow: 0 0 8px rgba(239,68,68,0.6); }
+  .status-dot.busy { background: var(--gold);  animation: dotPulse 0.7s ease-in-out infinite; }
+  @keyframes dotPulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+  .card {
+    width: 100%; max-width: 560px;
+    background: var(--panel);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px 24px; display: flex; flex-direction: column; gap: 16px;
+  }
+  .card-title {
+    font-size: 11px; font-weight: 800; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--border); padding-bottom: 10px;
+  }
+  .field-label { font-size: 12px; color: var(--muted); margin-bottom: 5px; font-weight: 600; }
+  .field-row { display: flex; gap: 8px; }
+
+  input[type="text"] {
+    flex: 1; background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 14px; color: var(--text); font-size: 14px; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.18);
+  }
+  input[type="text"]::placeholder { color: var(--muted); }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 7px; padding: 11px 20px; border: none; border-radius: 10px;
+    font-size: 13px; font-weight: 800; letter-spacing: 0.5px;
+    cursor: pointer; text-transform: uppercase;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+  .btn-indigo {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff;
+    box-shadow: 0 4px 18px rgba(99,102,241,0.35);
+  }
+  .btn-indigo:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(99,102,241,0.55); transform: translateY(-1px); }
+
+  .btn-roll {
+    width: 100%; background: linear-gradient(135deg, #7c3aed, #a855f7, #6366f1);
+    color: #fff; font-size: 18px; padding: 18px 28px; border-radius: 14px;
+    box-shadow: 0 6px 28px rgba(168,85,247,0.45); letter-spacing: 2px;
+    border: none; cursor: pointer;
+    position: relative; overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-roll::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.15) 50%, transparent 65%);
+    background-size: 200% 100%;
+    animation: shimmer 2.5s ease-in-out infinite;
+  }
+  @keyframes shimmer { 0%,100%{background-position:-100% 0;} 50%{background-position:200% 0;} }
+  .btn-roll:hover:not(:disabled) {
+    box-shadow: 0 10px 36px rgba(168,85,247,0.65); transform: translateY(-2px);
+  }
+  .btn-roll:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-roll.firing { animation: rollFire 0.45s cubic-bezier(0.3,0.7,0.4,1); }
+  @keyframes rollFire { 0%{transform:scale(1);} 30%{transform:scale(1.06);} 60%{transform:scale(0.97);} 100%{transform:scale(1);} }
+
+  .log-box {
+    background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px; padding: 12px 14px;
+    max-height: 180px; overflow-y: auto;
+    font-size: 12px; font-family: 'Courier New', monospace;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .log-entry { color: var(--muted); }
+  .log-entry.ok   { color: #86efac; }
+  .log-entry.err  { color: #fca5a5; }
+  .log-entry.info { color: #93c5fd; }
+
+  #toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: rgba(30,30,50,0.97);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 22px; font-size: 14px; font-weight: 700; color: #fff;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    transition: transform 0.35s cubic-bezier(0.2,0.9,0.3,1.1), opacity 0.3s;
+    opacity: 0; pointer-events: none; z-index: 9999; white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎮 Пульт управления</h1>
+  <p>EnergyShow · Быстрый ролл по нику · Реальное время</p>
+</div>
+
+<div class="status-bar">
+  <div class="status-dot" id="status-dot"></div>
+  <span id="status-text">Подключение к Firebase…</span>
+</div>
+
+<div class="card">
+  <div class="card-title">⚙️ Канал</div>
+  <div>
+    <div class="field-label">Twitch-канал (как задан в EnergyShow)</div>
+    <div class="field-row">
+      <input type="text" id="channel-input" placeholder="например: vadyms22" autocomplete="off">
+      <button class="btn btn-indigo" onclick="saveChannel()">Сохранить</button>
+    </div>
+  </div>
+  <div id="channel-display" style="font-size:12px; color:var(--muted);"></div>
+</div>
+
+<div class="card">
+  <div class="card-title">🎲 Быстрый ролл</div>
+  <div>
+    <div class="field-label">Ник который ДОЛЖЕН выпасть</div>
+    <input type="text" id="nick-input" placeholder="Введи никнейм участника…" autocomplete="off"
+           onkeydown="if(event.key==='Enter') doForceRoll()">
+  </div>
+  <button class="btn-roll" id="roll-btn" onclick="doForceRoll()" disabled>
+    ⚡ БЫСТРЫЙ РОЛЛ
+  </button>
+  <p style="font-size:11px; color:var(--muted); text-align:center; line-height:1.5;">
+    Ник сразу появится победителем в EnergyShow на всех устройствах
+  </p>
+</div>
+
+<div class="card" id="last-card" style="display:none;">
+  <div class="card-title">✅ Последняя команда</div>
+  <div id="last-info" style="font-size:15px; font-weight:700; color:#86efac;"></div>
+  <div id="last-time" style="font-size:11px; color:var(--muted);"></div>
+</div>
+
+<div class="card">
+  <div class="card-title">📋 Лог событий</div>
+  <div class="log-box" id="log-box"></div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore-compat.js"></script>
+<script>
+const FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyDZYBxqh05e9HrEQXlaVYglP2RbPFdcivA",
+    authDomain:        "bot-podkrutka.firebaseapp.com",
+    projectId:         "bot-podkrutka",
+    storageBucket:     "bot-podkrutka.firebasestorage.app",
+    messagingSenderId: "208233505545",
+    appId:             "1:208233505545:web:fb12241a04ed6f52b2e9d8",
+    measurementId:     "G-TCH4QTYH8V"
+};
+
+let db = null;
+let currentChannel = '';
+
+function sanitize(ch) {
+    return (ch || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 25);
+}
+
+function setStatus(text, state) {
+    document.getElementById('status-text').textContent = text;
+    const dot = document.getElementById('status-dot');
+    dot.className = 'status-dot' + (state ? ' ' + state : '');
+}
+
+function addLog(msg, cls) {
+    const box = document.getElementById('log-box');
+    const el = document.createElement('div');
+    el.className = 'log-entry' + (cls ? ' ' + cls : '');
+    el.textContent = '[' + new Date().toLocaleTimeString('ru-RU') + '] ' + msg;
+    box.prepend(el);
+    while (box.children.length > 60) box.removeChild(box.lastChild);
+}
+
+function showToast(msg, color) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.color = color || '#fff';
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+function initFirebase() {
+    try {
+        if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+        db = firebase.firestore();
+        setStatus('Firebase подключён ✓', 'ok');
+        addLog('Firebase инициализирован', 'ok');
+        loadChannel();
+    } catch (e) {
+        setStatus('Ошибка Firebase: ' + e.message, 'err');
+        addLog('Ошибка Firebase: ' + e.message, 'err');
+    }
+}
+
+function loadChannel() {
+    const saved = localStorage.getItem('remote_ctrl_channel') || '';
+    document.getElementById('channel-input').value = saved;
+    applyChannel(saved);
+    if (saved) subscribeLastCommand();
+}
+
+function saveChannel() {
+    const ch = sanitize(document.getElementById('channel-input').value);
+    if (!ch) { showToast('⚠️ Введи имя канала!', '#fbbf24'); return; }
+    localStorage.setItem('remote_ctrl_channel', ch);
+    document.getElementById('channel-input').value = ch;
+    applyChannel(ch);
+    showToast('✅ Канал: ' + ch, '#86efac');
+    addLog('Канал: ' + ch, 'info');
+    subscribeLastCommand();
+}
+
+function applyChannel(ch) {
+    currentChannel = ch;
+    const disp = document.getElementById('channel-display');
+    disp.innerHTML = ch
+        ? 'Канал: <b style="color:var(--accent2)">' + ch + '</b>'
+        : 'Канал не задан';
+    document.getElementById('roll-btn').disabled = !ch || !db;
+}
+
+let _unsub = null;
+function subscribeLastCommand() {
+    if (_unsub) { try { _unsub(); } catch(e){} _unsub = null; }
+    if (!db || !currentChannel) return;
+    _unsub = db.collection('remoteCommands').doc('cmd_' + currentChannel)
+        .onSnapshot(doc => {
+            if (!doc.exists) return;
+            const d = doc.data() || {};
+            if (d.action === 'forceRoll' && d.nick) {
+                document.getElementById('last-card').style.display = '';
+                const ts = d.ts ? new Date(d.ts.toMillis()).toLocaleTimeString('ru-RU') : '';
+                document.getElementById('last-info').textContent = '⚡ ' + d.nick;
+                document.getElementById('last-time').textContent = ts ? 'В ' + ts : '';
+            }
+        }, err => addLog('Подписка: ' + err.message, 'err'));
+}
+
+async function doForceRoll() {
+    const nick = document.getElementById('nick-input').value.trim();
+    if (!nick) { showToast('⚠️ Введи ник!', '#fbbf24'); document.getElementById('nick-input').focus(); return; }
+    if (!currentChannel) { showToast('⚠️ Укажи канал!', '#fbbf24'); return; }
+    if (!db) { showToast('❌ Firebase не подключён', '#fca5a5'); return; }
+
+    const btn = document.getElementById('roll-btn');
+    btn.disabled = true;
+    btn.classList.add('firing');
+    setStatus('Отправка…', 'busy');
+
+    try {
+        await db.collection('remoteCommands').doc('cmd_' + currentChannel).set({
+            action:  'forceRoll',
+            nick:    nick,
+            channel: currentChannel,
+            ts:      firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        addLog('✅ Отправлено → "' + nick + '"', 'ok');
+        showToast('⚡ Ролл: ' + nick, '#86efac');
+        setStatus('Команда отправлена → ' + nick, 'ok');
+        setTimeout(() => { document.getElementById('nick-input').value = ''; }, 700);
+    } catch (e) {
+        addLog('Ошибка: ' + e.message, 'err');
+        showToast('❌ ' + e.message, '#fca5a5');
+        setStatus('Ошибка', 'err');
+    } finally {
+        setTimeout(() => { btn.disabled = false; btn.classList.remove('firing'); }, 700);
+    }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('channel-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') saveChannel();
+    });
+    initFirebase();
+});
+</script>
+</body>
+</html>
+
