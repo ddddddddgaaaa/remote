@@ -1,616 +1,429 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<meta name="theme-color" content="#0e0f12" />
-<title>Настройка участников — TopBot</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Какашка</title>
 <style>
-  :root{
-    --bg:#0e0f12; --ink:#ededf0; --ink-dim:#9b9ba6; --ink-faint:#6d6d78;
-    --primary:#7950f2; --primary-2:#9b7cff; --points:#41c0a9; --donation:#f6646c;
-    --line:rgba(255,255,255,.07); --card:rgba(255,255,255,.03);
-    --grad:linear-gradient(135deg,#8b5cf6,#7950f2 45%,#6d28d9);
-    --font:'Inter',system-ui,'Segoe UI',Roboto,sans-serif;
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:      #0a0a14;
+    --panel:   #111122;
+    --border:  rgba(99,102,241,0.25);
+    --accent:  #6366f1;
+    --accent2: #a78bfa;
+    --green:   #22c55e;
+    --red:     #ef4444;
+    --gold:    #f59e0b;
+    --text:    #e2e8f0;
+    --muted:   #64748b;
+    --radius:  16px;
   }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--ink);font-family:var(--font);min-height:100vh}
-  .bgfx{position:fixed;inset:0;z-index:-1;pointer-events:none;
-    background:radial-gradient(55% 45% at 18% 0%,rgba(109,40,217,.25),transparent 60%),
-               radial-gradient(50% 45% at 85% 10%,rgba(65,192,169,.1),transparent 60%)}
-  .topbar{position:sticky;top:0;z-index:20;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
-    background:rgba(14,15,18,.75);border-bottom:1px solid var(--line);padding:12px 0}
-  .topbar-in{display:flex;align-items:center;gap:12px;max-width:920px;margin:0 auto;padding:0 22px}
-  .logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.15rem}
-  .logo-mark{width:34px;height:34px;border-radius:10px;background:var(--grad);display:grid;place-items:center;box-shadow:0 6px 16px -4px rgba(121,80,242,.6)}
-  .total{margin-left:auto;color:var(--ink-dim);font-size:.9rem;background:rgba(255,255,255,.04);border:1px solid var(--line);padding:6px 14px;border-radius:999px}
 
-  main{max-width:920px;margin:0 auto;padding:30px 22px 60px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px}
-  .kicker{font-size:.72rem;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;color:var(--primary-2);margin-bottom:6px}
-  .card h2{font-size:1.4rem;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
-  .card .sub{color:var(--ink-dim);font-size:.9rem;margin-bottom:20px}
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px 60px;
+    gap: 20px;
+  }
 
-  .form{display:grid;grid-template-columns:1.4fr 0.8fr auto;gap:10px;margin-bottom:16px}
-  @media(max-width:520px){.form{grid-template-columns:1fr 1fr}.form .btn{grid-column:1/-1}}
-  .field label{display:block;font-size:.74rem;color:var(--ink-faint);margin-bottom:4px;font-weight:600}
-  .field input{width:100%;background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;
-    color:var(--ink);font-family:var(--font);font-size:1rem;padding:11px 13px;outline:none;transition:.2s}
-  .field input:focus{border-color:var(--primary);background:rgba(121,80,242,.07)}
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;
-    font-family:var(--font);font-weight:700;font-size:.95rem;border-radius:12px;padding:12px 18px;transition:.2s;color:#fff}
-  .addbtn{background:var(--points);color:#04211c;align-self:end}
-  .addbtn:hover{background:#35a893}
+  .header { width: 100%; max-width: 560px; text-align: center; }
+  .header h1 {
+    font-size: 22px; font-weight: 900; letter-spacing: 2px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .header p { font-size: 12px; color: var(--muted); margin-top: 4px; }
 
-  .list{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow:auto;padding-right:4px}
-  .empty{color:var(--ink-faint);text-align:center;font-size:.9rem;padding:30px 0;border:1px dashed var(--line);border-radius:12px}
-  .row{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.03);border:1px solid var(--line);
-    border-radius:12px;padding:10px 13px}
-  .row .idx{width:26px;height:26px;border-radius:8px;background:rgba(121,80,242,.16);color:var(--primary-2);
-    display:grid;place-items:center;font-size:.78rem;font-weight:700;flex-shrink:0}
-  .row .nick{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .row .points{font-weight:800;color:var(--points);flex-shrink:0}
-  .row .del{background:none;border:0;color:var(--ink-faint);cursor:pointer;font-size:1.3rem;line-height:1;padding:2px 6px;border-radius:8px}
-  .row .del:hover{color:var(--donation);background:rgba(246,100,108,.12)}
+  .status-bar {
+    width: 100%; max-width: 560px;
+    display: flex; align-items: center; gap: 10px;
+    background: var(--panel);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 10px 16px; font-size: 13px;
+  }
+  .status-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--muted); flex-shrink: 0; transition: background 0.3s;
+  }
+  .status-dot.ok   { background: var(--green); box-shadow: 0 0 8px rgba(34,197,94,0.6); }
+  .status-dot.err  { background: var(--red);   box-shadow: 0 0 8px rgba(239,68,68,0.6); }
+  .status-dot.busy { background: var(--gold);  animation: dotPulse 0.7s ease-in-out infinite; }
+  @keyframes dotPulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
 
-  .bottom{display:flex;align-items:center;gap:12px;margin-top:18px;flex-wrap:wrap}
-  .clearbtn{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--ink)}
-  .clearbtn:hover{background:rgba(246,100,108,.15);border-color:rgba(246,100,108,.4);color:var(--donation)}
-  .launch{margin-top:26px;background:var(--grad);box-shadow:0 12px 30px -10px rgba(121,80,242,.85);width:100%}
-  .launch:hover{transform:translateY(-2px);filter:brightness(1.05)}
-  .hint-note{color:var(--ink-faint);font-size:.82rem;margin-top:8px;text-align:center}
+  .card {
+    width: 100%; max-width: 560px;
+    background: var(--panel);
+    border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 22px 24px; display: flex; flex-direction: column; gap: 16px;
+  }
+  .card-title {
+    font-size: 11px; font-weight: 800; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--muted);
+    border-bottom: 1px solid var(--border); padding-bottom: 10px;
+  }
+  .field-label { font-size: 12px; color: var(--muted); margin-bottom: 5px; font-weight: 600; }
+  .field-row { display: flex; gap: 8px; }
 
-  /* ===== Рулетка (встроенная, тот же адрес) ===== */
-  #wheel{scroll-margin-top:90px}
-  .wheel-section{max-width:920px;margin:0 auto;padding:0 22px 60px}
-  .card.wheel-card{text-align:center}
-  .wheel-box{display:flex;flex-direction:column;align-items:center;gap:18px;margin-top:8px}
-  .wheel-wrap{position:relative;width:min(100%,420px);aspect-ratio:1;margin:0 auto}
-  canvas.wh{width:100%;height:100%;display:block;filter:drop-shadow(0 20px 50px rgba(0,0,0,.5))}
-  .pointer{position:absolute;top:-8px;left:50%;transform:translateX(-50%);z-index:5;
-    width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;
-    border-top:30px solid #fff;filter:drop-shadow(0 4px 5px rgba(0,0,0,.5))}
-  .hub{position:absolute;inset:50% 0 0 50%;transform:translate(-50%,-50%);z-index:4;
-    width:84px;height:84px;border-radius:50%;background:var(--grad);display:grid;place-items:center;
-    box-shadow:0 8px 24px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.35);pointer-events:none}
-  .spinbtn{background:var(--grad);box-shadow:0 12px 30px -8px rgba(121,80,242,.85);color:#fff;
-    border:0;cursor:pointer;font-family:var(--font);font-weight:800;font-size:1.1rem;
-    border-radius:14px;padding:15px 42px;transition:.2s;letter-spacing:.3px}
-  .spinbtn:hover:not(:disabled){transform:translateY(-2px);filter:brightness(1.06)}
-  .spinbtn:disabled{opacity:.4;cursor:not-allowed}
-  .winner-big{min-height:34px;text-align:center;font-weight:800;font-size:1.4rem;color:var(--primary-2);text-shadow:0 0 18px rgba(121,80,242,.5)}
-  .hint-wheel{color:var(--ink-faint);font-size:.9rem;text-align:center;max-width:34ch}
-  .wheel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  input[type="text"] {
+    flex: 1; background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 14px; color: var(--text); font-size: 14px; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.18);
+  }
+  input[type="text"]::placeholder { color: var(--muted); }
 
-  /* ===== Twitch ===== */
-  .twitch-card{margin-top:20px;border-color:rgba(145,70,255,.25)}
-  .twitch-card .kicker{color:#9146ff}
-  .tw-form{display:grid;grid-template-columns:1fr auto auto;gap:10px;margin-bottom:12px;align-items:end}
-  @media(max-width:520px){.tw-form{grid-template-columns:1fr}.tw-form .btn{grid-column:1/-1}}
-  .tw-login-btn{background:linear-gradient(135deg,#9146ff,#772ce8);color:#fff;align-self:end}
-  .tw-login-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
-  .tw-logout-btn{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--ink);align-self:end}
-  .tw-logout-btn:hover{background:rgba(246,100,108,.15);border-color:rgba(246,100,108,.4);color:var(--donation)}
-  .tw-status{font-size:.85rem;padding:8px 14px;border-radius:10px;background:rgba(255,255,255,.04);border:1px solid var(--line);display:inline-block;margin-bottom:10px}
-  .tw-error{font-size:.82rem;color:var(--donation);background:rgba(246,100,108,.1);border:1px solid rgba(246,100,108,.3);border-radius:10px;padding:8px 14px;margin-bottom:10px}
-  .tw-help{margin-top:12px;font-size:.82rem;color:var(--ink-faint)}
-  .tw-help summary{cursor:pointer;color:var(--ink-dim);font-weight:600;margin-bottom:8px}
-  .tw-help ol{padding-left:20px;line-height:1.7}
-  .tw-help code{background:rgba(255,255,255,.08);padding:2px 6px;border-radius:4px;font-size:.78rem;color:var(--primary-2)}
-  .tw-file-warn{background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.35);color:#f5a623;border-radius:10px;padding:10px 14px;font-size:.82rem;margin-bottom:12px}
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 7px; padding: 11px 20px; border: none; border-radius: 10px;
+    font-size: 13px; font-weight: 800; letter-spacing: 0.5px;
+    cursor: pointer; text-transform: uppercase;
+    transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.96); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none !important; }
+  .btn-full { width: 100%; }
+  .btn-red {
+    background: rgba(239,68,68,0.12);
+    border: 1px solid rgba(239,68,68,0.35);
+    color: #fca5a5;
+  }
+  .btn-red:hover:not(:disabled) {
+    background: rgba(239,68,68,0.22);
+    box-shadow: 0 4px 18px rgba(239,68,68,0.22);
+    transform: translateY(-1px);
+  }
+  .btn-indigo {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed); color: #fff;
+    box-shadow: 0 4px 18px rgba(99,102,241,0.35);
+  }
+  .btn-indigo:hover:not(:disabled) { box-shadow: 0 6px 24px rgba(99,102,241,0.55); transform: translateY(-1px); }
 
-  .rewards-card{margin-top:20px;border-color:rgba(145,70,255,.25)}
-  .rewards-card .kicker{color:#9146ff}
-  .rw-create{display:grid;gap:10px;margin-bottom:16px;padding:16px;background:rgba(145,70,255,.05);border:1px solid rgba(145,70,255,.15);border-radius:12px}
-  .rw-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  @media(max-width:420px){.rw-row{grid-template-columns:1fr}}
-  .rw-checkboxes{display:flex;gap:18px;flex-wrap:wrap}
-  .chk{display:flex;align-items:center;gap:6px;font-size:.85rem;color:var(--ink-dim);cursor:pointer}
-  .chk input{accent-color:#9146ff;width:16px;height:16px;cursor:pointer}
-  .rw-add-btn{background:linear-gradient(135deg,#9146ff,#772ce8);color:#fff;align-self:start}
-  .rw-add-btn:hover{filter:brightness(1.1);transform:translateY(-1px)}
-  .reward-list{display:flex;flex-direction:column;gap:8px;max-height:360px;overflow:auto;padding-right:4px}
-  .reward-item{display:flex;align-items:center;gap:12px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
-  .ri-left{flex:1;min-width:0}
-  .ri-title{font-weight:700;font-size:.92rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .ri-meta{font-size:.76rem;color:var(--ink-faint);margin-top:2px}
-  .ri-right{display:flex;align-items:center;gap:6px;flex-shrink:0}
-  .ri-badge{font-size:.68rem;font-weight:800;padding:3px 8px;border-radius:999px;letter-spacing:.5px}
-  .ri-badge.on{background:rgba(65,192,169,.15);color:var(--points)}
-  .ri-badge.off{background:rgba(255,255,255,.06);color:var(--ink-faint)}
-  .ri-btn{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--ink-dim);cursor:pointer;width:30px;height:30px;border-radius:8px;font-size:.9rem;display:grid;place-items:center;transition:.2s}
-  .ri-btn:hover{background:rgba(145,70,255,.15);border-color:rgba(145,70,255,.4);color:#9146ff}
-  .ri-btn.del:hover{background:rgba(246,100,108,.15);border-color:rgba(246,100,108,.4);color:var(--donation)}
-  .sync-btn{margin-top:16px;background:linear-gradient(135deg,#9146ff,#772ce8);color:#fff;width:100%;box-shadow:0 10px 26px -10px rgba(145,70,255,.7)}
-  .sync-btn:hover:not(:disabled){filter:brightness(1.1);transform:translateY(-2px)}
-  .sync-btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn-roll {
+    width: 100%; background: linear-gradient(135deg, #7c3aed, #a855f7, #6366f1);
+    color: #fff; font-size: 18px; padding: 18px 28px; border-radius: 14px;
+    box-shadow: 0 6px 28px rgba(168,85,247,0.45); letter-spacing: 2px;
+    border: none; cursor: pointer;
+    position: relative; overflow: hidden;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .btn-roll::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,0.15) 50%, transparent 65%);
+    background-size: 200% 100%;
+    animation: shimmer 2.5s ease-in-out infinite;
+  }
+  @keyframes shimmer { 0%,100%{background-position:-100% 0;} 50%{background-position:200% 0;} }
+  .btn-roll:hover:not(:disabled) {
+    box-shadow: 0 10px 36px rgba(168,85,247,0.65); transform: translateY(-2px);
+  }
+  .btn-roll:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-roll.firing { animation: rollFire 0.45s cubic-bezier(0.3,0.7,0.4,1); }
+  @keyframes rollFire { 0%{transform:scale(1);} 30%{transform:scale(1.06);} 60%{transform:scale(0.97);} 100%{transform:scale(1);} }
+
+  .log-box {
+    background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px; padding: 12px 14px;
+    max-height: 180px; overflow-y: auto;
+    font-size: 12px; font-family: 'Courier New', monospace;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .log-entry { color: var(--muted); }
+  .log-entry.ok   { color: #86efac; }
+  .log-entry.err  { color: #fca5a5; }
+  .log-entry.info { color: #93c5fd; }
+
+  #toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: rgba(30,30,50,0.97);
+    border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 22px; font-size: 14px; font-weight: 700; color: #fff;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    transition: transform 0.35s cubic-bezier(0.2,0.9,0.3,1.1), opacity 0.3s;
+    opacity: 0; pointer-events: none; z-index: 9999; white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 </style>
 </head>
 <body>
-<div class="bgfx"></div>
 
-<header class="topbar">
-  <div class="topbar-in">
-    <div class="logo">
-      <span class="logo-mark">
-        <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 4"/></svg>
-      </span>
-      TopBot · Настройка
+<div class="header">
+  <h1>🎮 Пульт управления</h1>
+  <p>EnergyShow · Быстрый ролл по нику · Реальное время</p>
+</div>
+
+<div class="status-bar">
+  <div class="status-dot" id="status-dot"></div>
+  <span id="status-text">Подключение к Firebase…</span>
+</div>
+
+<div class="card">
+  <div class="card-title">⚙️ Канал</div>
+  <div>
+    <div class="field-label">Twitch-канал (как задан в EnergyShow)</div>
+    <div class="field-row">
+      <input type="text" id="channel-input" placeholder="например: vadyms22" autocomplete="off">
+      <button class="btn btn-indigo" onclick="saveChannel()">Сохранить</button>
     </div>
-    <div class="total" id="totalBadge">Участников: 0</div>
   </div>
-</header>
+  <div id="channel-display" style="font-size:12px; color:var(--muted);"></div>
+</div>
 
-<main>
-  <section class="card">
-    <div class="kicker">Участники</div>
-    <h2>Добавить участника</h2>
-    <p class="sub">Впиши ник и количество баллов. Чем больше баллов — тем больше шанс в рулетке.</p>
-
-    <div class="form">
-      <div class="field">
-        <label for="nick">Ник участника</label>
-        <input id="nick" type="text" placeholder="например, sypher48" autocomplete="off" />
-      </div>
-      <div class="field">
-        <label for="points">Баллы</label>
-        <input id="points" type="number" min="0" step="1" placeholder="100" autocomplete="off" />
-      </div>
-      <button class="btn addbtn" onclick="addParticipant()">Добавить</button>
-    </div>
-
-    <div class="list" id="list">
-      <div class="empty">Список пуст. Добавь первого участника выше ☝</div>
-    </div>
-
-    <div class="bottom">
-      <button class="btn clearbtn" onclick="clearAll()">🗑 Очистить всё</button>
-    </div>
-
-    <a class="btn launch" href="#wheel">
-      🎡 Открыть рулетку&nbsp;(прокрутить вниз)
-    </a>
-  </section>
-</main>
-
-<main>
-  <section class="card twitch-card">
-    <div class="kicker">Twitch</div>
-    <h2>Подключить Twitch</h2>
-    <p class="sub">Управляй наградами канала и синхронизируй баллы зрителей с рулеткой.</p>
-
-    <div class="tw-file-warn" id="twFileWarn" style="display:none">⚠️ Файл открыт локально (file://) — OAuth не сработал. Запусти через локальный сервер (например, <code>http-server</code> или Live Server в VS Code).</div>
-
-    <div class="tw-form">
-      <div class="field">
-        <label for="twClientId">Client ID приложения Twitch</label>
-        <input id="twClientId" type="text" placeholder="например, abcdefghijklmnopqrstuvwxyz1234" autocomplete="off" />
-      </div>
-      <button class="btn tw-login-btn" id="twLoginBtn" onclick="window._topbot_twitchLogin()">🎮 Подключить</button>
-      <button class="btn tw-logout-btn" id="twLogoutBtn" onclick="window._topbot_twitchLogout()" style="display:none">Отключить</button>
-    </div>
-
-    <div class="tw-status" id="twStatus">Не подключено</div>
-    <div class="tw-error" id="twError" style="display:none"></div>
-
-    <details class="tw-help">
-      <summary>💡 Как получить Client ID?</summary>
-      <ol>
-        <li>Перейди на <a href="https://dev.twitch.tv/console" target="_blank" style="color:#9146ff">dev.twitch.tv/console</a></li>
-        <li>Нажми <strong>Register Your Application</strong></li>
-        <li>В поле <em>OAuth Redirect URLs</em> добавь: <code id="twRedirectUrl">—</code></li>
-        <li>Category выбери <strong>Application Integration</strong>, тип — <strong>Confidential</strong></li>
-        <li>Скопируй <strong>Client ID</strong> и вставь выше</li>
-      </ol>
-    </details>
-  </section>
-
-  <section class="card rewards-card" id="rewardsCard" style="display:none">
-    <div class="kicker">Награды канала</div>
-    <h2>Управление наградами</h2>
-    <p class="sub">Создавай, включай/выключай и удаляй награды за баллы канала.</p>
-
-    <div class="rw-create">
-      <div class="field">
-        <label for="rwTitle">Название награды</label>
-        <input id="rwTitle" type="text" maxlength="45" placeholder="например, Участие в рулетке" />
-      </div>
-      <div class="rw-row">
-        <div class="field">
-          <label for="rwCost">Стоимость (баллы)</label>
-          <input id="rwCost" type="number" min="1" step="1" placeholder="100" />
-        </div>
-        <div class="field">
-          <label for="rwColor">Цвет фона</label>
-          <input id="rwColor" type="color" value="#9146FF" />
-        </div>
-      </div>
-      <div class="field">
-        <label for="rwPrompt">Описание (prompt)</label>
-        <input id="rwPrompt" type="text" maxlength="200" placeholder="Что получит зритель за эту награду" />
-      </div>
-      <div class="rw-checkboxes">
-        <label class="chk"><input type="checkbox" id="rwNeedInput" /> Требовать ввод текста</label>
-        <label class="chk"><input type="checkbox" id="rwEnabled" checked /> Награда включена</label>
-      </div>
-      <button class="btn rw-add-btn" onclick="window._topbot_createReward()">＋ Создать награду</button>
-    </div>
-
-    <div class="reward-list" id="rewardsList">
-      <div class="empty">Наград пока нет. Создай первую выше ☝</div>
-    </div>
-
-    <button class="btn sync-btn" id="syncBtn" onclick="window._topbot_syncRedemptions()">🔄 Синхронизировать с рулеткой</button>
-    <p class="hint-note">Добавит зрителей, купивших награды, в список участников рулетки (1 покупка = 1 балл)</p>
-  </section>
-</main>
-
-<section class="wheel-section card wheel-card" id="wheel">
-  <div class="wheel-head">
-    <div class="kicker">Рулетка</div>
+<div class="card">
+  <div class="card-title">🎲 Быстрый ролл</div>
+  <div>
+    <div class="field-label">Никнейм который ДОЛЖЕН выпасть</div>
+    <input type="text" id="nick-input" placeholder="Введи никнейм участника…" autocomplete="off"
+           onkeydown="if(event.key==='Enter') doForceRoll()">
   </div>
-  <h2>Колесо участников</h2>
-  <p class="sub" style="margin-bottom:20px">Чем больше баллов — тем больше сектор и шанс выиграть.</p>
+  <button class="btn-roll" id="roll-btn" onclick="doForceRoll()" disabled>
+    ⚡ ЗАДАТЬ ДЛЯ БЫСТРОГО РОЛЛА
+  </button>
+  <button class="btn btn-red btn-full" style="font-size:12px;" onclick="doClearRig()">
+    ✖ Сбросить подкрутку
+  </button>
+  <p style="font-size:12px; color:var(--muted); text-align:center; line-height:1.5;">
+    Введи ник и нажми кнопку. Ник сохранится в облаке.<br>
+    Когда в основном окне <b>EnergyShow</b> нажмут кнопку <b>«Быстрый ролл»</b> — выпадет именно этот человек!
+  </p>
+</div>
 
-  <div class="wheel-box">
-    <div class="wheel-wrap">
-      <div class="pointer"></div>
-      <canvas id="wheelCanvas" class="wh" width="720" height="720"></canvas>
-      <div class="hub">
-        <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
-      </div>
-    </div>
-    <button class="spinbtn" id="spinBtn" disabled>Крутить рулетку</button>
-    <div class="winner-big" id="winner"></div>
-    <div class="hint-wheel" id="whint">Добавь хотя бы 2 участника выше</div>
-  </div>
-</section>
+<div class="card" id="last-card" style="display:none;">
+  <div class="card-title">🎯 Текущая подкрутка</div>
+  <div id="last-info" style="font-size:15px; font-weight:700; color:#86efac;"></div>
+  <div id="last-time" style="font-size:11px; color:var(--muted);"></div>
+</div>
+
+<div class="card">
+  <div class="card-title">📋 Лог событий</div>
+  <div class="log-box" id="log-box"></div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore-compat.js"></script>
 <script>
-  var KEY = 'topbot_participants';
-  var participants = load();
+const FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyDZYBxqh05e9HrEQXlaVYglP2RbPFdcivA",
+    authDomain:        "bot-podkrutka.firebaseapp.com",
+    projectId:         "bot-podkrutka",
+    storageBucket:     "bot-podkrutka.firebasestorage.app",
+    messagingSenderId: "208233505545",
+    appId:             "1:208233505545:web:fb12241a04ed6f52b2e9d8",
+    measurementId:     "G-TCH4QTYH8V"
+};
 
-  function load(){
-    try{ var d = JSON.parse(localStorage.getItem(KEY) || '[]'); return Array.isArray(d) ? d : []; }
-    catch(e){ return []; }
-  }
-  function save(){ localStorage.setItem(KEY, JSON.stringify(participants)); }
+let db = null;
+let currentChannel = '';
 
-  function addParticipant(){
-    var nick = document.getElementById('nick').value.trim();
-    var pts = parseInt(document.getElementById('points').value, 10);
-    if(!nick){ shake('nick'); return; }
-    if(isNaN(pts) || pts < 0) pts = 0;
-    participants.push({ nick: nick, points: pts });
-    save();
-    render();
-    document.getElementById('nick').value = '';
-    document.getElementById('points').value = '';
-    document.getElementById('nick').focus();
-  }
-  function shake(id){
-    var el = document.getElementById(id);
-    el.style.borderColor = '#f6646c';
-    setTimeout(function(){ el.style.borderColor = ''; }, 700);
-  }
-  function removeAt(i){ participants.splice(i, 1); save(); render(); }
-  function clearAll(){ participants = []; save(); render(); }
+function sanitize(ch) {
+    return (ch || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 25);
+}
 
-  function totalPoints(){ return participants.reduce(function(a,p){ return a + (p.points||0); }, 0); }
+function setStatus(text, state) {
+    document.getElementById('status-text').textContent = text;
+    const dot = document.getElementById('status-dot');
+    dot.className = 'status-dot' + (state ? ' ' + state : '');
+}
 
-  function render(){
-    var list = document.getElementById('list');
-    var badge = document.getElementById('totalBadge');
-    if(!participants.length){
-      list.innerHTML = '<div class="empty">Список пуст. Добавь первого участника выше ☝</div>';
-      badge.textContent = 'Участников: 0';
-    } else {
-      var html = '';
-      participants.forEach(function(p, i){
-        html += '<div class="row">'
-          + '<div class="idx">' + (i+1) + '</div>'
-          + '<div class="nick" title="' + String(p.nick).replace(/"/g,'&quot;') + '">' + p.nick + '</div>'
-          + '<div class="points">' + (p.points||0) + ' б.</div>'
-          + '<button class="del" title="Удалить" onclick="removeAt(' + i + ')">&times;</button>'
-          + '</div>';
-      });
-      list.innerHTML = html;
-      badge.textContent = 'Участников: ' + participants.length + ' · баллов: ' + totalPoints();
+function addLog(msg, cls) {
+    const box = document.getElementById('log-box');
+    const el = document.createElement('div');
+    el.className = 'log-entry' + (cls ? ' ' + cls : '');
+    el.textContent = '[' + new Date().toLocaleTimeString('ru-RU') + '] ' + msg;
+    box.prepend(el);
+    while (box.children.length > 60) box.removeChild(box.lastChild);
+}
+
+function showToast(msg, color) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.color = color || '#fff';
+    t.classList.add('show');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+function initFirebase() {
+    try {
+        if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+        db = firebase.firestore();
+        setStatus('Firebase подключён ✓', 'ok');
+        addLog('Firebase инициализирован', 'ok');
+        loadChannel();
+    } catch (e) {
+        setStatus('Ошибка Firebase: ' + e.message, 'err');
+        addLog('Ошибка Firebase: ' + e.message, 'err');
     }
-    if(typeof drawWheel === 'function'){ drawWheel(); updateSpinControls(); }
-  }
+}
 
-/* ===== Встроенная рулетка ===== */
-  var spinState = { spinning:false, rotation:0 };
-  var WHEEL_COLORS = ['#7950f2','#8b5cf6','#41c0a9','#f6646c','#f5a623','#2f9e44','#1c7ed6','#e64980','#ae3ec9','#f76707','#5c7cfa','#38a3a5'];
-  var wcanvas = document.getElementById('wheelCanvas');
-  var wctx = wcanvas.getContext('2d');
-  var spinBtn = document.getElementById('spinBtn');
-  var winnerEl = document.getElementById('winner');
-  var whintEl = document.getElementById('whint');
+function loadChannel() {
+    const saved = sanitize(localStorage.getItem('remote_ctrl_channel') || '');
+    document.getElementById('channel-input').value = saved;
+    applyChannel(saved);
+    if (saved) subscribeLastCommand();
+}
 
-  function shortWheelName(n){
-    if(typeof n !== 'string') n = String(n||'');
-    return n.length > 9 ? n.slice(0,8) + '…' : n;
-  }
-  function drawWheel(){
-    var S = wcanvas.width, cx = S/2, cy = S/2, r = S/2 - 8;
-    wctx.clearRect(0, 0, S, S);
-    if(participants.length === 0){
-      wctx.beginPath(); wctx.arc(cx, cy, r, 0, Math.PI*2);
-      wctx.fillStyle = 'rgba(255,255,255,.04)'; wctx.fill();
-      wctx.strokeStyle = 'rgba(255,255,255,.12)'; wctx.lineWidth = 3; wctx.stroke();
-      wctx.fillStyle = '#6d6d78';
-      wctx.font = '700 26px Inter'; wctx.textAlign = 'center'; wctx.textBaseline = 'middle';
-      wctx.fillText('Нет участников', cx, cy);
-      return;
+function saveChannel() {
+    const ch = sanitize(document.getElementById('channel-input').value);
+    if (!ch) { showToast('⚠️ Введи имя канала!', '#fbbf24'); return; }
+    localStorage.setItem('remote_ctrl_channel', ch);
+    document.getElementById('channel-input').value = ch;
+    applyChannel(ch);
+    showToast('✅ Канал: ' + ch, '#86efac');
+    addLog('Канал: ' + ch, 'info');
+    subscribeLastCommand();
+}
+
+function applyChannel(ch) {
+    currentChannel = sanitize(ch);
+    const disp = document.getElementById('channel-display');
+    disp.textContent = currentChannel
+        ? 'Канал: ' + currentChannel
+        : 'Канал не задан';
+    document.getElementById('roll-btn').disabled = !currentChannel || !db;
+
+    const lastCard = document.getElementById('last-card');
+    const lastInfo = document.getElementById('last-info');
+    const lastTime = document.getElementById('last-time');
+    if (lastCard) lastCard.style.display = 'none';
+    if (lastInfo) lastInfo.textContent = '';
+    if (lastTime) lastTime.textContent = '';
+}
+
+function getCommandTime(value) {
+    if (!value) return '';
+    try {
+        const millis = typeof value.toMillis === 'function' ? value.toMillis() : Number(value);
+        return Number.isFinite(millis) ? new Date(millis).toLocaleTimeString('ru-RU') : '';
+    } catch (error) {
+        return '';
     }
-    wctx.save();
-    wctx.translate(cx, cy);
-    wctx.rotate(spinState.rotation);
-    wctx.translate(-cx, -cy);
+}
 
-    var pts = participants.map(function(p){ return Math.max(p.points||0, 1); });
-    var sum = pts.reduce(function(a,b){ return a + b; }, 0);
-    var start = -Math.PI/2;
-    for(var i = 0; i < participants.length; i++){
-      var frac = pts[i] / sum;
-      var end = start + frac * Math.PI * 2;
-      wctx.beginPath(); wctx.moveTo(cx, cy); wctx.arc(cx, cy, r, start, end); wctx.closePath();
-      wctx.fillStyle = WHEEL_COLORS[i % WHEEL_COLORS.length]; wctx.fill();
-      wctx.strokeStyle = 'rgba(0,0,0,.35)'; wctx.lineWidth = 2; wctx.stroke();
-      var mid = (start + end) / 2, tr = r * 0.62;
-      wctx.save();
-      wctx.translate(cx + Math.cos(mid)*tr, cy + Math.sin(mid)*tr);
-      wctx.rotate(mid + Math.PI/2);
-      wctx.fillStyle = '#fff';
-      wctx.font = '700 ' + Math.min(18, Math.max(11, 320/participants.length)) + 'px Inter';
-      wctx.textAlign = 'center'; wctx.textBaseline = 'middle';
-      wctx.fillText(shortWheelName(participants[i].nick), 0, 0, r * 0.5);
-      wctx.restore();
-      start = end;
+let _unsub = null;
+function subscribeLastCommand() {
+    if (_unsub) {
+        try { _unsub(); } catch (error) { addLog('Отписка: ' + error.message, 'err'); }
+        _unsub = null;
     }
-    wctx.restore();
-    wctx.beginPath(); wctx.arc(cx, cy, r, 0, Math.PI*2);
-    wctx.strokeStyle = 'rgba(255,255,255,.25)'; wctx.lineWidth = 3; wctx.stroke();
-  }
-  function updateSpinControls(){
-    var ok = participants.length >= 2;
-    spinBtn.disabled = !ok || spinState.spinning;
-    spinBtn.textContent = spinState.spinning ? 'Крутим…' : 'Крутить рулетку';
-    whintEl.textContent = ok ? 'Больше баллов — больше шанс.' : 'Добавь хотя бы 2 участника выше';
-  }
-  function spinWheel(){
-    if(spinState.spinning || participants.length < 2) return;
-    spinState.spinning = true;
-    updateSpinControls();
-    winnerEl.textContent = '';
+    if (!db || !currentChannel) return;
 
-    var pts = participants.map(function(p){ return Math.max(p.points||0, 1); });
-    var total = pts.reduce(function(a,b){ return a + b; }, 0);
-    var roll = Math.random() * total;
-    var idxWin = 0, acc = 0;
-    for(var i = 0; i < pts.length; i++){ acc += pts[i]; if(roll <= acc){ idxWin = i; break; } }
+    try {
+        _unsub = db.collection('remoteCommands').doc('cmd_' + currentChannel)
+            .onSnapshot(doc => {
+                const lastCard = document.getElementById('last-card');
+                const lastInfo = document.getElementById('last-info');
+                const lastTime = document.getElementById('last-time');
+                if (!lastCard || !lastInfo || !lastTime) return;
 
-    var beforeFrac = pts.slice(0, idxWin).reduce(function(a,b){ return a + b; }, 0) / total;
-    var segMid = (beforeFrac + (pts[idxWin]/2)/total) * Math.PI * 2;
-    var winAngle = -Math.PI/2 + segMid;
-    var targetLocal = -Math.PI/2 - winAngle;
-    var target = spinState.rotation + Math.PI * 2 * (5 + Math.random()*5);
-    var delta = ((targetLocal - target) % (Math.PI*2) + Math.PI*2) % (Math.PI*2);
-    target += delta;
+                if (!doc.exists) {
+                    lastCard.style.display = 'none';
+                    lastInfo.textContent = '';
+                    lastTime.textContent = '';
+                    return;
+                }
 
-    var current = spinState.rotation, totalMove = target - current;
-    var t0 = null, DUR = 4500;
-    function frame(ts){
-      if(t0 === null) t0 = ts;
-      var p = Math.min(1, (ts - t0) / DUR);
-      var ease = 1 - Math.pow(1 - p, 3);
-      spinState.rotation = current + totalMove * ease;
-      drawWheel();
-      if(p < 1){ requestAnimationFrame(frame); }
-      else{
-        spinState.spinning = false;
-        var won = participants[idxWin];
-        winnerEl.textContent = '🎉 ' + won.nick + '  (' + (won.points||0) + ' б.)';
-        updateSpinControls();
-      }
+                const data = doc.data() || {};
+                if ((data.action === 'forceRoll' || data.action === 'setRig100') && typeof data.nick === 'string' && data.nick.trim()) {
+                    const nick = data.nick.trim();
+                    const timestamp = getCommandTime(data.ts);
+                    lastCard.style.display = '';
+                    lastInfo.textContent = '🎯 ' + nick;
+                    lastTime.textContent = timestamp
+                        ? 'Сохранено в ' + timestamp + ' (ждёт нажатия «Быстрый ролл»)' 
+                        : 'Команда сохранена (ждёт нажатия «Быстрый ролл»)';
+                } else if (data.action === 'clearRig') {
+                    lastCard.style.display = 'none';
+                    lastInfo.textContent = '';
+                    lastTime.textContent = '';
+                }
+            }, error => {
+                addLog('Подписка: ' + error.message, 'err');
+                setStatus('Ошибка подписки', 'err');
+            });
+    } catch (error) {
+        addLog('Ошибка подписки: ' + error.message, 'err');
+        setStatus('Ошибка подписки', 'err');
+        _unsub = null;
     }
-    requestAnimationFrame(frame);
-  }
-  spinBtn.addEventListener('click', spinWheel);
-  document.addEventListener('keydown', function(e){
-    if(e.key === 'Enter'){
-      var t = e.target;
-      if(t && (t.id === 'nick' || t.id === 'points')){ e.preventDefault(); addParticipant(); }
-    }
-  });
+}
 
-  /* ===== TWITCH INTEGRATION ===== */
-  (function(){
-    var T_OAUTH = 'https://id.twitch.tv/oauth2/authorize';
-    var T_API   = 'https://api.twitch.tv/helix';
-    var T_SCOPES = 'channel:read:redemptions channel:manage:redemptions';
-    var T_KEY   = 'topbot_twitch';
-    var tw = { clientId:'', accessToken:'', broadcasterId:'', broadcasterName:'', rewards:[], error:'' };
+async function doForceRoll() {
+    const nick = document.getElementById('nick-input').value.trim();
+    if (!nick) { showToast('⚠️ Введи ник!', '#fbbf24'); document.getElementById('nick-input').focus(); return; }
+    if (!currentChannel) { showToast('⚠️ Укажи канал!', '#fbbf24'); return; }
+    if (!db) { showToast('❌ Firebase не подключён', '#fca5a5'); return; }
 
-    function t_load(){
-      try{ var d=JSON.parse(localStorage.getItem(T_KEY)||'{}'); tw.clientId=d.clientId||''; tw.accessToken=d.accessToken||''; tw.broadcasterId=d.broadcasterId||''; tw.broadcasterName=d.broadcasterName||''; }catch(e){}
-    }
-    function t_save(){ localStorage.setItem(T_KEY, JSON.stringify({clientId:tw.clientId,accessToken:tw.accessToken,broadcasterId:tw.broadcasterId,broadcasterName:tw.broadcasterName})); }
+    const btn = document.getElementById('roll-btn');
+    btn.disabled = true;
+    btn.classList.add('firing');
+    setStatus('Сохранение…', 'busy');
 
-    function t_checkRedirect(){
-      var h=window.location.hash;
-      if(h && h.indexOf('access_token')!==-1){
-        var p=new URLSearchParams(h.substring(1)); var tok=p.get('access_token');
-        if(tok){
-          tw.accessToken=tok;
-          history.replaceState(null,null,window.location.pathname+window.location.search);
-          t_save();
-          if(window.opener){ try{window.opener.postMessage({type:'twitch_auth',token:tok,clientId:tw.clientId},'*');}catch(e){} window.close(); }
-          else t_fetchUser();
-          return true;
-        }
-      }
-      return false;
-    }
-
-    function t_api(path,method,body){
-      var hdrs={'Client-Id':tw.clientId,'Authorization':'Bearer '+tw.accessToken};
-      if(body) hdrs['Content-Type']='application/json';
-      return fetch(T_API+path,{method:method||'GET',headers:hdrs,body:body?JSON.stringify(body):undefined})
-        .then(function(r){
-          if(r.status===401) throw new Error('UNAUTHORIZED');
-          if(r.status===429) throw new Error('RATE_LIMIT');
-          if(!r.ok) return r.json().then(function(d){throw new Error(d.message||'API_ERROR');});
-          if(r.status===204) return {};
-          return r.json();
+    try {
+        await db.collection('remoteCommands').doc('cmd_' + currentChannel).set({
+            action:  'forceRoll',
+            nick:    nick,
+            channel: currentChannel,
+            ts:      firebase.firestore.FieldValue.serverTimestamp(),
         });
+        addLog('🎯 Сохранён ник: "' + nick + '" для следующего быстрого ролла', 'ok');
+        showToast('🎯 Задано: ' + nick, '#86efac');
+        setStatus('Ник сохранён → ' + nick, 'ok');
+        setTimeout(() => { document.getElementById('nick-input').value = ''; }, 700);
+    } catch (e) {
+        addLog('Ошибка: ' + e.message, 'err');
+        showToast('❌ ' + e.message, '#fca5a5');
+        setStatus('Ошибка', 'err');
+    } finally {
+        setTimeout(() => { btn.disabled = false; btn.classList.remove('firing'); }, 700);
     }
+}
 
-    function t_fetchUser(){
-      return t_api('/users').then(function(d){
-        if(d.data && d.data.length){ tw.broadcasterId=d.data[0].id; tw.broadcasterName=d.data[0].display_name; t_save(); t_render(); t_fetchRewards(); }
-      }).catch(function(err){ if(err.message==='UNAUTHORIZED'){tw.error='Токен недействителен. Авторизуйтесь заново.';t_logout();}else{tw.error='Ошибка: '+err.message;t_render();} });
-    }
+async function doClearRig() {
+    if (!currentChannel) { showToast('⚠️ Укажи канал!', '#fbbf24'); return; }
+    if (!db) { showToast('❌ Firebase не подключён', '#fca5a5'); return; }
 
-    function t_fetchRewards(){
-      if(!tw.broadcasterId) return Promise.resolve();
-      return t_api('/channel_points/custom_rewards?broadcaster_id='+tw.broadcasterId)
-        .then(function(d){ tw.rewards=d.data||[]; t_renderRewards(); })
-        .catch(function(err){ tw.error='Не удалось загрузить награды: '+err.message; t_render(); });
-    }
-
-    function t_createReward(data){
-      return t_api('/channel_points/custom_rewards?broadcaster_id='+tw.broadcasterId,'POST',data)
-        .then(function(){ t_fetchRewards(); }).catch(function(err){ tw.error='Ошибка создания: '+err.message; t_render(); });
-    }
-
-    function t_updateReward(id,data){
-      return t_api('/channel_points/custom_rewards?broadcaster_id='+tw.broadcasterId+'&id='+id,'PATCH',data)
-        .then(function(){ t_fetchRewards(); }).catch(function(err){ tw.error='Ошибка обновления: '+err.message; t_render(); });
-    }
-
-    function t_deleteReward(id){
-      return t_api('/channel_points/custom_rewards?broadcaster_id='+tw.broadcasterId+'&id='+id,'DELETE')
-        .then(function(){ t_fetchRewards(); }).catch(function(err){ tw.error='Ошибка удаления: '+err.message; t_render(); });
-    }
-
-    function t_login(){
-      var cid=document.getElementById('twClientId').value.trim();
-      if(!cid){ shake('twClientId'); return; }
-      tw.clientId=cid; t_save();
-      var redirectUri=window.location.origin+window.location.pathname;
-      var params=new URLSearchParams({client_id:cid,redirect_uri:redirectUri,response_type:'token',scope:T_SCOPES,state:'topbot_'+Date.now()});
-      var w=window.open(T_OAUTH+'?'+params.toString(),'twitch_oauth','width=520,height=680,menubar=no,toolbar=no');
-      if(!w||w.closed){ tw.error='Попап заблокирован. Разрешите всплывающие окна.'; t_render(); }
-    }
-
-    function t_logout(){
-      tw.accessToken=''; tw.broadcasterId=''; tw.broadcasterName=''; tw.rewards=[]; tw.error='';
-      t_save(); t_render(); t_renderRewards();
-    }
-
-    function t_syncRedemptions(){
-      if(!tw.broadcasterId||!tw.rewards.length){ alert('Подключите Twitch.'); return; }
-      var btn=document.getElementById('syncBtn'); btn.disabled=true; btn.textContent='⏳ Загрузка...';
-      var promises=tw.rewards.map(function(r){
-        return t_api('/channel_points/custom_redemptions?broadcaster_id='+tw.broadcasterId+'&reward_id='+r.id+'&status=FULFILLED&first=100')
-          .then(function(d){return {reward:r,redemptions:d.data||[]};}).catch(function(){return {reward:r,redemptions:[]};});
-      });
-      Promise.all(promises).then(function(results){
-        var up={};
-        results.forEach(function(res){ res.redemptions.forEach(function(red){ var n=red.user_name||red.user_login||'unknown'; up[n]=(up[n]||0)+1; }); });
-        var added=0,updated=0;
-        Object.keys(up).forEach(function(name){
-          var ex=null; for(var i=0;i<participants.length;i++){ if(participants[i].nick===name){ex=participants[i];break;} }
-          if(ex){ ex.points=(ex.points||0)+up[name]; updated++; } else { participants.push({nick:name,points:up[name]}); added++; }
+    setStatus('Сброс…', 'busy');
+    try {
+        await db.collection('remoteCommands').doc('cmd_' + currentChannel).set({
+            action:  'clearRig',
+            nick:    '',
+            channel: currentChannel,
+            ts:      firebase.firestore.FieldValue.serverTimestamp(),
         });
-        save(); render(); btn.disabled=false; btn.textContent='🔄 Синхронизировать с рулеткой';
-        alert('Готово!\nДобавлено: '+added+'\nОбновлено: '+updated);
-      }).catch(function(err){ btn.disabled=false; btn.textContent='🔄 Синхронизировать с рулеткой'; alert('Ошибка: '+err.message); });
+        addLog('✖ Подкрутка сброшена', 'info');
+        showToast('✖ Подкрутка сброшена', '#93c5fd');
+        setStatus('Подкрутка выключена', 'ok');
+        document.getElementById('last-card').style.display = 'none';
+    } catch(e) {
+        addLog('Ошибка: ' + e.message, 'err');
+        showToast('❌ ' + e.message, '#fca5a5');
     }
+}
 
-    function t_render(){
-      var cidEl=document.getElementById('twClientId');
-      var statusEl=document.getElementById('twStatus');
-      var loginBtn=document.getElementById('twLoginBtn');
-      var logoutBtn=document.getElementById('twLogoutBtn');
-      var rewCard=document.getElementById('rewardsCard');
-      var errEl=document.getElementById('twError');
-      if(cidEl) cidEl.value=tw.clientId;
-      if(tw.accessToken&&tw.broadcasterName){
-        if(statusEl) statusEl.textContent='✅ Подключён: '+tw.broadcasterName;
-        if(loginBtn) loginBtn.style.display='none';
-        if(logoutBtn) logoutBtn.style.display='';
-        if(rewCard) rewCard.style.display='';
-      } else {
-        if(statusEl) statusEl.textContent='Не подключено';
-        if(loginBtn) loginBtn.style.display='';
-        if(logoutBtn) logoutBtn.style.display='none';
-        if(rewCard) rewCard.style.display='none';
-      }
-      if(errEl){ errEl.textContent=tw.error||''; errEl.style.display=tw.error?'':'none'; }
-    }
-
-    function t_renderRewards(){
-      var list=document.getElementById('rewardsList');
-      if(!list) return;
-      if(!tw.rewards.length){ list.innerHTML='<div class="empty">Наград пока нет. Создай первую выше ☝</div>'; return; }
-      var html='';
-      for(var i=0;i<tw.rewards.length;i++){
-        var r=tw.rewards[i]; var en=r.is_enabled!==false;
-        html+='<div class="reward-item"><div class="ri-left">'
-          +'<div class="ri-title">'+String(r.title||'—').replace(/</g,'&lt;')+'</div>'
-          +'<div class="ri-meta">'+(r.cost||0)+' баллов'+(r.is_user_input_required?' · ввод текста':'')+(r.max_per_stream?' · макс./стрим: '+r.max_per_stream:'')
-          +'</div></div><div class="ri-right">'
-          +'<span class="ri-badge '+(en?'on':'off')+'">'+(en?'ВКЛ':'ВЫКЛ')+'</span>'
-          +'<button class="ri-btn" onclick="window._topbot_toggleReward(\''+r.id+'\','+(!en)+')">'+(en?'⏸':'▶')+'</button>'
-          +'<button class="ri-btn del" onclick="window._topbot_deleteReward(\''+r.id+'\')">&times;</button>'
-          +'</div></div>';
-      }
-      list.innerHTML=html;
-    }
-
-    function t_handleCreate(){
-      var title=document.getElementById('rwTitle').value.trim();
-      var cost=parseInt(document.getElementById('rwCost').value,10);
-      var prompt=document.getElementById('rwPrompt').value.trim();
-      var bgColor=document.getElementById('rwColor').value;
-      var needInput=document.getElementById('rwNeedInput').checked;
-      var enabled=document.getElementById('rwEnabled').checked;
-      if(!title){ shake('rwTitle'); return; }
-      if(isNaN(cost)||cost<1){ shake('rwCost'); return; }
-      var data={title:title,cost:cost,is_enabled:enabled,is_user_input_required:needInput,background_color:bgColor};
-      if(prompt) data.prompt=prompt;
-      t_createReward(data);
-      document.getElementById('rwTitle').value='';
-      document.getElementById('rwCost').value='';
-      document.getElementById('rwPrompt').value='';
-      document.getElementById('rwNeedInput').checked=false;
-      document.getElementById('rwEnabled').checked=true;
-    }
-
-    function t_initUI(){
-      if(window.location.protocol==='file:'){ var fw=document.getElementById('twFileWarn'); if(fw) fw.style.display=''; }
-      var rtu=document.getElementById('twRedirectUrl'); if(rtu) rtu.textContent=window.location.origin+window.location.pathname;
-      window._topbot_twitchLogin=t_login;
-      window._topbot_twitchLogout=t_logout;
-      window._topbot_toggleReward=function(id,en){t_updateReward(id,{is_enabled:en});};
-      window._topbot_deleteReward=function(id){ if(confirm('Удалить награду?')) t_deleteReward(id); };
-      window._topbot_createReward=t_handleCreate;
-      window._topbot_syncRedemptions=t_syncRedemptions;
-      window.addEventListener('message',function(e){ if(e.data&&e.data.type==='twitch_auth'){tw.accessToken=e.data.token;if(e.data.clientId)tw.clientId=e.data.clientId;t_save();t_fetchUser();} });
-      t_render();
-    }
-
-    t_load();
-    if(!t_checkRedirect() && tw.accessToken) t_fetchUser();
-    t_initUI();
-  })();
-  render();
+window.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('channel-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') saveChannel();
+    });
+    initFirebase();
+});
 </script>
 </body>
 </html>
