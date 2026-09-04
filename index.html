@@ -260,16 +260,25 @@ function showToast(msg, color) {
     t._timer = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
+  function getFirebaseErrorMessage(error) {
+    if (error?.code === 'resource-exhausted' || String(error?.message || '').includes('Quota exceeded')) {
+      return 'Лимит Firebase исчерпан. Попробуй после сброса квоты или увеличь тариф.';
+    }
+    return error?.message || 'Не удалось сохранить команду';
+  }
+
 function initFirebase() {
     try {
         if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
         db = firebase.firestore();
+        db.settings({ experimentalForceLongPolling: true, useFetchStreams: false });
         setStatus('Firebase подключён ✓', 'ok');
         addLog('Firebase инициализирован', 'ok');
         loadChannel();
     } catch (e) {
-        setStatus('Ошибка Firebase: ' + e.message, 'err');
-        addLog('Ошибка Firebase: ' + e.message, 'err');
+      const message = getFirebaseErrorMessage(e);
+      setStatus('Ошибка Firebase: ' + message, 'err');
+      addLog('Ошибка Firebase: ' + message, 'err');
     }
 }
 
@@ -377,7 +386,7 @@ async function doForceRoll() {
     setStatus('Сохранение…', 'busy');
 
     try {
-        await db.collection('remoteCommands').doc('cmd_' + currentChannel).set({
+        const writePromise = db.collection('remoteCommands').doc('cmd_' + currentChannel).set({
             action:  'forceRoll',
             nick:    nick,
             channel: currentChannel,
@@ -385,13 +394,18 @@ async function doForceRoll() {
           consumed: false,
             ts:      firebase.firestore.FieldValue.serverTimestamp(),
         });
+        await Promise.race([
+          writePromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase не отвечает за 8 секунд')), 8000)),
+        ]);
         addLog('🎯 Сохранён ник: "' + nick + '" для следующего быстрого ролла', 'ok');
         showToast('🎯 Задано: ' + nick, '#86efac');
         setStatus('Ник сохранён → ' + nick, 'ok');
         setTimeout(() => { document.getElementById('nick-input').value = ''; }, 700);
     } catch (e) {
-        addLog('Ошибка: ' + e.message, 'err');
-        showToast('❌ ' + e.message, '#fca5a5');
+      const message = getFirebaseErrorMessage(e);
+      addLog('Ошибка: ' + message, 'err');
+      showToast('❌ ' + message, '#fca5a5');
         setStatus('Ошибка', 'err');
     } finally {
         setTimeout(() => { btn.disabled = false; btn.classList.remove('firing'); }, 700);
@@ -404,20 +418,25 @@ async function doClearRig() {
 
     setStatus('Сброс…', 'busy');
     try {
-        await db.collection('remoteCommands').doc('cmd_' + currentChannel).set({
+        const writePromise = db.collection('remoteCommands').doc('cmd_' + currentChannel).set({
             action:  'clearRig',
             nick:    '',
             channel: currentChannel,
           commandId: String(Date.now()) + '_' + Math.random().toString(36).slice(2),
             ts:      firebase.firestore.FieldValue.serverTimestamp(),
         });
+        await Promise.race([
+          writePromise,
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase не отвечает за 8 секунд')), 8000)),
+        ]);
         addLog('✖ Подкрутка сброшена', 'info');
         showToast('✖ Подкрутка сброшена', '#93c5fd');
         setStatus('Подкрутка выключена', 'ok');
         document.getElementById('last-card').style.display = 'none';
     } catch(e) {
-        addLog('Ошибка: ' + e.message, 'err');
-        showToast('❌ ' + e.message, '#fca5a5');
+      const message = getFirebaseErrorMessage(e);
+      addLog('Ошибка: ' + message, 'err');
+      showToast('❌ ' + message, '#fca5a5');
     }
 }
 
