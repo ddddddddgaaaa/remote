@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>nissss</title>
+<title>🎮 Пульт управления — EnergyShow</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -346,7 +346,9 @@ function subscribeLastCommand() {
                     const timestamp = getCommandTime(data.ts);
                     lastCard.style.display = '';
                     lastInfo.textContent = '🎯 ' + nick;
-                    lastTime.textContent = timestamp
+                  lastTime.textContent = data.consumed === true
+                    ? 'Уже использовано в EnergyShow'
+                    : timestamp
                         ? 'Сохранено в ' + timestamp + ' (ждёт нажатия «Быстрый ролл»)' 
                         : 'Команда сохранена (ждёт нажатия «Быстрый ролл»)';
                 } else if (data.action === 'clearRig') {
