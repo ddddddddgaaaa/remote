@@ -272,6 +272,27 @@ function initSupabase() {
     }
 }
 
+  function loadChannel() {
+    const saved = sanitize(localStorage.getItem('remote_ctrl_channel') || '');
+    document.getElementById('channel-input').value = saved;
+    applyChannel(saved);
+    if (saved) subscribeSupabaseCommands();
+  }
+
+  function saveChannel() {
+    const channel = sanitize(document.getElementById('channel-input').value);
+    if (!channel) {
+      showToast('⚠️ Введи имя канала!', '#fbbf24');
+      return;
+    }
+    localStorage.setItem('remote_ctrl_channel', channel);
+    document.getElementById('channel-input').value = channel;
+    applyChannel(channel);
+    subscribeSupabaseCommands();
+    showToast('✅ Канал: ' + channel, '#86efac');
+    addLog('Канал: ' + channel, 'info');
+  }
+
 function commandRowToData(row) {
   return row ? {
     action: row.action,
