@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Какашка</title>
+<title>nissss</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -381,6 +381,8 @@ async function doForceRoll() {
             action:  'forceRoll',
             nick:    nick,
             channel: currentChannel,
+          commandId: String(Date.now()) + '_' + Math.random().toString(36).slice(2),
+          consumed: false,
             ts:      firebase.firestore.FieldValue.serverTimestamp(),
         });
         addLog('🎯 Сохранён ник: "' + nick + '" для следующего быстрого ролла', 'ok');
@@ -406,6 +408,7 @@ async function doClearRig() {
             action:  'clearRig',
             nick:    '',
             channel: currentChannel,
+          commandId: String(Date.now()) + '_' + Math.random().toString(36).slice(2),
             ts:      firebase.firestore.FieldValue.serverTimestamp(),
         });
         addLog('✖ Подкрутка сброшена', 'info');
@@ -427,3 +430,4 @@ window.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
