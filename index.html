@@ -169,7 +169,7 @@
 
 <div class="status-bar">
   <div class="status-dot" id="status-dot"></div>
-  <span id="status-text">Подключение к Firebase…</span>
+  <span id="status-text">Подключение к Supabase…</span>
 </div>
 
 <div class="card">
@@ -216,21 +216,13 @@
 
 <div id="toast"></div>
 
-<script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.7.0/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-const FIREBASE_CONFIG = {
-    apiKey:            "AIzaSyDZYBxqh05e9HrEQXlaVYglP2RbPFdcivA",
-    authDomain:        "bot-podkrutka.firebaseapp.com",
-    projectId:         "bot-podkrutka",
-    storageBucket:     "bot-podkrutka.firebasestorage.app",
-    messagingSenderId: "208233505545",
-    appId:             "1:208233505545:web:fb12241a04ed6f52b2e9d8",
-    measurementId:     "G-TCH4QTYH8V"
-};
-
-let db = null;
+const SUPABASE_URL = 'https://omtggzcaaymikqwfhtxv.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_4PfWjbLXkoVLmIVZqaoviw_6DXg1PTk';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentChannel = '';
+let supabaseSubscription = null;
 
 function sanitize(ch) {
     return (ch || '').trim().toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 25);
@@ -260,44 +252,70 @@ function showToast(msg, color) {
     t._timer = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
-  function getFirebaseErrorMessage(error) {
+function getDatabaseErrorMessage(error) {
     if (error?.code === 'resource-exhausted' || String(error?.message || '').includes('Quota exceeded')) {
-      return 'Лимит Firebase исчерпан. Попробуй после сброса квоты или увеличь тариф.';
+        return 'Лимит базы исчерпан. Проверь лимиты Supabase.';
     }
     return error?.message || 'Не удалось сохранить команду';
-  }
+}
 
-function initFirebase() {
+function initSupabase() {
     try {
-        if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
-        db = firebase.firestore();
-        db.settings({ experimentalForceLongPolling: true, useFetchStreams: false });
-        setStatus('Firebase подключён ✓', 'ok');
-        addLog('Firebase инициализирован', 'ok');
+    if (!window.supabase || !supabaseClient) throw new Error('Supabase не загрузился');
+    setStatus('Supabase подключён ✓', 'ok');
+    addLog('Supabase инициализирован', 'ok');
         loadChannel();
     } catch (e) {
-      const message = getFirebaseErrorMessage(e);
-      setStatus('Ошибка Firebase: ' + message, 'err');
-      addLog('Ошибка Firebase: ' + message, 'err');
+        const message = getDatabaseErrorMessage(e);
+        setStatus('Ошибка Supabase: ' + message, 'err');
+        addLog('Ошибка Supabase: ' + message, 'err');
     }
 }
 
-function loadChannel() {
-    const saved = sanitize(localStorage.getItem('remote_ctrl_channel') || '');
-    document.getElementById('channel-input').value = saved;
-    applyChannel(saved);
-    if (saved) subscribeLastCommand();
+function commandRowToData(row) {
+  return row ? {
+    action: row.action,
+    nick: row.nick,
+    commandId: row.command_id,
+    consumed: row.consumed === true,
+    ts: row.ts ? { toMillis: () => new Date(row.ts).getTime() } : null,
+  } : null;
 }
 
-function saveChannel() {
-    const ch = sanitize(document.getElementById('channel-input').value);
-    if (!ch) { showToast('⚠️ Введи имя канала!', '#fbbf24'); return; }
-    localStorage.setItem('remote_ctrl_channel', ch);
-    document.getElementById('channel-input').value = ch;
-    applyChannel(ch);
-    showToast('✅ Канал: ' + ch, '#86efac');
-    addLog('Канал: ' + ch, 'info');
-    subscribeLastCommand();
+async function loadSupabaseCommand() {
+  if (!currentChannel) return;
+  const { data, error } = await supabaseClient
+    .from('remote_commands')
+    .select('*')
+    .eq('channel', currentChannel)
+  .maybeSingle();
+  if (error) throw error;
+  renderCommand(commandRowToData(data));
+}
+
+function renderCommand(data) {
+  const lastCard = document.getElementById('last-card');
+  const lastInfo = document.getElementById('last-info');
+  const lastTime = document.getElementById('last-time');
+  if (!lastCard || !lastInfo || !lastTime) return;
+  if (!data || (data.action !== 'forceRoll' && data.action !== 'setRig100')) {
+    lastCard.style.display = 'none';
+    return;
+  }
+  lastCard.style.display = '';
+  lastInfo.textContent = '🎯 ' + data.nick;
+  lastTime.textContent = data.consumed
+    ? 'Уже использовано в EnergyShow'
+    : 'Команда сохранена (ждёт нажатия «Быстрый ролл»)';
+}
+
+function subscribeSupabaseCommands() {
+  if (supabaseSubscription) clearInterval(supabaseSubscription);
+  if (!currentChannel) return;
+  loadSupabaseCommand().catch(error => addLog('Supabase: ' + error.message, 'err'));
+  supabaseSubscription = setInterval(() => {
+    loadSupabaseCommand().catch(error => addLog('Supabase: ' + error.message, 'err'));
+  }, 1000);
 }
 
 function applyChannel(ch) {
@@ -306,7 +324,7 @@ function applyChannel(ch) {
     disp.textContent = currentChannel
         ? 'Канал: ' + currentChannel
         : 'Канал не задан';
-    document.getElementById('roll-btn').disabled = !currentChannel || !db;
+    document.getElementById('roll-btn').disabled = !currentChannel || !supabaseClient;
 
     const lastCard = document.getElementById('last-card');
     const lastInfo = document.getElementById('last-info');
@@ -326,59 +344,11 @@ function getCommandTime(value) {
     }
 }
 
-let _unsub = null;
-function subscribeLastCommand() {
-    if (_unsub) {
-        try { _unsub(); } catch (error) { addLog('Отписка: ' + error.message, 'err'); }
-        _unsub = null;
-    }
-    if (!db || !currentChannel) return;
-
-    try {
-        _unsub = db.collection('remoteCommands').doc('cmd_' + currentChannel)
-            .onSnapshot(doc => {
-                const lastCard = document.getElementById('last-card');
-                const lastInfo = document.getElementById('last-info');
-                const lastTime = document.getElementById('last-time');
-                if (!lastCard || !lastInfo || !lastTime) return;
-
-                if (!doc.exists) {
-                    lastCard.style.display = 'none';
-                    lastInfo.textContent = '';
-                    lastTime.textContent = '';
-                    return;
-                }
-
-                const data = doc.data() || {};
-                if ((data.action === 'forceRoll' || data.action === 'setRig100') && typeof data.nick === 'string' && data.nick.trim()) {
-                    const nick = data.nick.trim();
-                    const timestamp = getCommandTime(data.ts);
-                    lastCard.style.display = '';
-                    lastInfo.textContent = '🎯 ' + nick;
-                    lastTime.textContent = timestamp
-                        ? 'Сохранено в ' + timestamp + ' (ждёт нажатия «Быстрый ролл»)' 
-                        : 'Команда сохранена (ждёт нажатия «Быстрый ролл»)';
-                } else if (data.action === 'clearRig') {
-                    lastCard.style.display = 'none';
-                    lastInfo.textContent = '';
-                    lastTime.textContent = '';
-                }
-            }, error => {
-                addLog('Подписка: ' + error.message, 'err');
-                setStatus('Ошибка подписки', 'err');
-            });
-    } catch (error) {
-        addLog('Ошибка подписки: ' + error.message, 'err');
-        setStatus('Ошибка подписки', 'err');
-        _unsub = null;
-    }
-}
-
 async function doForceRoll() {
     const nick = document.getElementById('nick-input').value.trim();
     if (!nick) { showToast('⚠️ Введи ник!', '#fbbf24'); document.getElementById('nick-input').focus(); return; }
     if (!currentChannel) { showToast('⚠️ Укажи канал!', '#fbbf24'); return; }
-    if (!db) { showToast('❌ Firebase не подключён', '#fca5a5'); return; }
+    if (!supabaseClient) { showToast('❌ Supabase не подключён', '#fca5a5'); return; }
 
     const btn = document.getElementById('roll-btn');
     btn.disabled = true;
@@ -386,24 +356,25 @@ async function doForceRoll() {
     setStatus('Сохранение…', 'busy');
 
     try {
-        const writePromise = db.collection('remoteCommands').doc('cmd_' + currentChannel).set({
-            action:  'forceRoll',
-            nick:    nick,
-            channel: currentChannel,
-          commandId: String(Date.now()) + '_' + Math.random().toString(36).slice(2),
+        const writePromise = supabaseClient.from('remote_commands').upsert({
+          channel: currentChannel,
+          action: 'forceRoll',
+          nick,
+          command_id: String(Date.now()) + '_' + Math.random().toString(36).slice(2),
           consumed: false,
-            ts:      firebase.firestore.FieldValue.serverTimestamp(),
+          ts: new Date().toISOString(),
         });
-        await Promise.race([
+        const writeResult = await Promise.race([
           writePromise,
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase не отвечает за 8 секунд')), 8000)),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Supabase не отвечает за 8 секунд')), 8000)),
         ]);
+        if (writeResult.error) throw writeResult.error;
         addLog('🎯 Сохранён ник: "' + nick + '" для следующего быстрого ролла', 'ok');
         showToast('🎯 Задано: ' + nick, '#86efac');
         setStatus('Ник сохранён → ' + nick, 'ok');
         setTimeout(() => { document.getElementById('nick-input').value = ''; }, 700);
     } catch (e) {
-      const message = getFirebaseErrorMessage(e);
+      const message = getDatabaseErrorMessage(e);
       addLog('Ошибка: ' + message, 'err');
       showToast('❌ ' + message, '#fca5a5');
         setStatus('Ошибка', 'err');
@@ -414,27 +385,29 @@ async function doForceRoll() {
 
 async function doClearRig() {
     if (!currentChannel) { showToast('⚠️ Укажи канал!', '#fbbf24'); return; }
-    if (!db) { showToast('❌ Firebase не подключён', '#fca5a5'); return; }
+    if (!supabaseClient) { showToast('❌ Supabase не подключён', '#fca5a5'); return; }
 
     setStatus('Сброс…', 'busy');
     try {
-        const writePromise = db.collection('remoteCommands').doc('cmd_' + currentChannel).set({
-            action:  'clearRig',
-            nick:    '',
-            channel: currentChannel,
-          commandId: String(Date.now()) + '_' + Math.random().toString(36).slice(2),
-            ts:      firebase.firestore.FieldValue.serverTimestamp(),
+        const writePromise = supabaseClient.from('remote_commands').upsert({
+          channel: currentChannel,
+          action: 'clearRig',
+          nick: '',
+          command_id: String(Date.now()) + '_' + Math.random().toString(36).slice(2),
+          consumed: false,
+          ts: new Date().toISOString(),
         });
-        await Promise.race([
+        const writeResult = await Promise.race([
           writePromise,
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Firebase не отвечает за 8 секунд')), 8000)),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Supabase не отвечает за 8 секунд')), 8000)),
         ]);
+        if (writeResult.error) throw writeResult.error;
         addLog('✖ Подкрутка сброшена', 'info');
         showToast('✖ Подкрутка сброшена', '#93c5fd');
         setStatus('Подкрутка выключена', 'ok');
         document.getElementById('last-card').style.display = 'none';
     } catch(e) {
-      const message = getFirebaseErrorMessage(e);
+      const message = getDatabaseErrorMessage(e);
       addLog('Ошибка: ' + message, 'err');
       showToast('❌ ' + message, '#fca5a5');
     }
@@ -444,7 +417,7 @@ window.addEventListener('DOMContentLoaded', () => {
     document.getElementById('channel-input').addEventListener('keydown', e => {
         if (e.key === 'Enter') saveChannel();
     });
-    initFirebase();
+    initSupabase();
 });
 </script>
 </body>
